@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pydantic-settings
+google-generativeai
+python-jose
+passlib[bcrypt]
+python-multipart
+python-dotenv
+email-validator
+pytest
+httpx
