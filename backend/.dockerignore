@@ -1,0 +1,8 @@
+.env
+.pytest_cache/
+ecosphere.db
+__pycache__/
+*.pyc
+tests/
+Dockerfile
+.dockerignore
