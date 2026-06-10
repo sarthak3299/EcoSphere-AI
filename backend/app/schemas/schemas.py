@@ -154,3 +154,8 @@ class RecommendationResponse(BaseModel):
     savings: float  # Estimated CO2e savings in kg
     difficulty: str  # Easy, Medium, Hard
     category: str
+
+# Incident Verification & Resolution Schemas
+class IncidentResolve(BaseModel):
+    image_data: Optional[str] = None
+

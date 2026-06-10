@@ -42,8 +42,13 @@ export default function ReportsView() {
   // UI Loading States
   const [loadingList, setLoadingList] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showResolveModal, setShowResolveModal] = useState(false);
+  const [proofImage, setProofImage] = useState<string | null>(null);
+  const [resolvingReport, setResolvingReport] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const proofInputRef = useRef<HTMLInputElement>(null);
 
   const fetchReports = async () => {
     setLoadingList(true);
@@ -115,6 +120,88 @@ export default function ReportsView() {
       alert(err instanceof Error ? err.message : "Failed to file incident report");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleVerifyReport = async () => {
+    if (!selectedReport) return;
+    setActionLoading(true);
+    try {
+      const result = await api.incident.verify(selectedReport.id);
+      alert(result.message);
+      await refreshData();
+      await fetchReports();
+      setSelectedReport((prev: any) => prev ? { ...prev, status: result.status } : null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to verify report");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleOrganizeEvent = async () => {
+    if (!selectedReport) return;
+    setActionLoading(true);
+    try {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(9, 0, 0, 0);
+
+      const title = `Community Cleanup: ${selectedReport.category}`;
+      const desc = `Join us in resolving this reported incident: ${selectedReport.description || 'No description provided'}. We will meet at the location to clear the hazard. Bring gloves and positive energy!`;
+      const organizer = "EcoSphere Volunteer";
+      const dateStr = tomorrow.toISOString();
+      const locationText = selectedReport.location_text;
+      const lat = selectedReport.latitude;
+      const lng = selectedReport.longitude;
+      const imageUrl = selectedReport.image_url;
+
+      await api.events.create(
+        title,
+        desc,
+        organizer,
+        dateStr,
+        locationText,
+        lat,
+        lng,
+        imageUrl
+      );
+
+      alert(`Cleanup event "${title}" organized successfully! You can find it listed under the Events tab. Let's make our neighborhood cleaner!`);
+      await refreshData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to create cleanup event");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleProofImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProofImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleResolveReport = async () => {
+    if (!selectedReport) return;
+    setResolvingReport(true);
+    try {
+      const result = await api.incident.resolve(selectedReport.id, proofImage || undefined);
+      alert(result.message);
+      setShowResolveModal(false);
+      setProofImage(null);
+      await refreshData();
+      await fetchReports();
+      setSelectedReport((prev: any) => prev ? { ...prev, status: "Resolved", image_url: proofImage || prev.image_url } : null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to resolve report");
+    } finally {
+      setResolvingReport(false);
     }
   };
 
@@ -392,6 +479,39 @@ export default function ReportsView() {
                   </div>
 
                   <hr className="border-slate-100" />
+
+                  {/* Closed-loop action controls */}
+                  {selectedReport.status !== "Resolved" && (
+                    <div className="flex flex-wrap gap-2 py-1">
+                      <button
+                        type="button"
+                        onClick={handleVerifyReport}
+                        disabled={actionLoading}
+                        className="flex-1 min-w-[100px] py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-[11px] rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                      >
+                        {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "👍 Verify Hazard (+5)"}
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={handleOrganizeEvent}
+                        disabled={actionLoading}
+                        className="flex-1 min-w-[100px] py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-bold text-[11px] rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                      >
+                        {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "🧹 Organize Cleanup"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowResolveModal(true)}
+                        className="flex-1 min-w-[100px] py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                      >
+                        ✨ Submit Proof (+40)
+                      </button>
+                    </div>
+                  )}
+
+                  <hr className="border-slate-100" />
                   
                   {/* Timeline */}
                   {renderTimeline(selectedReport.status)}
@@ -407,6 +527,66 @@ export default function ReportsView() {
         </div>
 
       </div>
+
+      {/* Resolve Proof Modal */}
+      {showResolveModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-100 shadow-2xl animate-fade-in space-y-4">
+            <div>
+              <h3 className="text-lg font-black text-slate-800">Submit Cleanup Proof</h3>
+              <p className="text-xs text-slate-400 mt-1">Upload a photo of the cleaned site to resolve this report and earn Eco Points + XP.</p>
+            </div>
+
+            <div 
+              onClick={() => proofInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-200 hover:border-emerald-400 bg-slate-50 hover:bg-emerald-50/10 rounded-2xl p-5 text-center cursor-pointer transition relative"
+            >
+              <input 
+                type="file" 
+                ref={proofInputRef}
+                accept="image/*"
+                onChange={handleProofImageChange}
+                className="hidden"
+              />
+              
+              {proofImage ? (
+                <div className="flex items-center justify-center gap-3">
+                  <img src={proofImage} alt="Proof Preview" className="w-16 h-16 object-cover rounded-xl border border-slate-200" />
+                  <div className="text-left">
+                    <span className="text-xs font-bold text-slate-700 block">Before & After Photo</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5">Click to replace photo</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <Camera className="w-8 h-8 text-slate-400 mx-auto mb-1" />
+                  <span className="text-xs font-bold text-slate-600 block">Select cleanup completion photo</span>
+                  <span className="text-[10px] text-slate-400 block">Required to claim points</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => { setShowResolveModal(false); setProofImage(null); }}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResolveReport}
+                disabled={resolvingReport || !proofImage}
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition shadow-sm"
+              >
+                {resolvingReport && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>Upload & Resolve</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

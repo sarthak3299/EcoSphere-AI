@@ -18,6 +18,24 @@ import {
 
 export default function DashboardView() {
   const { user, dashboardData, recommendations, events, setActiveTab } = useApp();
+  const [monthlyBudget, setMonthlyBudget] = React.useState<number>(500);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("monthly_carbon_budget");
+      if (saved) {
+        setMonthlyBudget(parseInt(saved, 10));
+      }
+    }
+  }, []);
+
+  const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    setMonthlyBudget(value);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("monthly_carbon_budget", value.toString());
+    }
+  };
 
   if (!dashboardData) {
     return (
@@ -35,6 +53,23 @@ export default function DashboardView() {
   const waterSaved = Math.round((user?.eco_score || 748) * 1.6);
   const userLevel = user?.level || 2;
   const userScore = user?.eco_score || 748;
+
+  const budgetPercent = Math.min(100, Math.round((total_footprint / monthlyBudget) * 100));
+  const isOverBudget = total_footprint >= monthlyBudget;
+  const isNearBudget = total_footprint >= monthlyBudget * 0.8 && total_footprint < monthlyBudget;
+
+  let gaugeColor = "#22c55e"; // Emerald
+  let gaugeText = "Safe Range 🌿";
+  let gaugeTextColor = "text-emerald-600";
+  if (total_footprint >= monthlyBudget) {
+    gaugeColor = "#ef4444"; // Red
+    gaugeText = "Limit Exceeded! ⚠️";
+    gaugeTextColor = "text-red-600";
+  } else if (total_footprint >= monthlyBudget * 0.8) {
+    gaugeColor = "#f59e0b"; // Amber
+    gaugeText = "Warning: Near Limit ⚠️";
+    gaugeTextColor = "text-amber-500";
+  }
 
   const sortedCategories = Object.entries(category_breakdowns as Record<string, number> || {})
     .sort((a, b) => b[1] - a[1]);
@@ -145,9 +180,9 @@ export default function DashboardView() {
           </div>
         </div>
 
-        {/* Eco Score Arc Gauge */}
+        {/* Carbon Budget Arc Gauge */}
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
-          <span className="text-sm font-semibold text-slate-500 mb-2">Your Eco Score</span>
+          <span className="text-sm font-semibold text-slate-500 mb-1">Carbon Budget</span>
           <div className="relative w-36 h-20 flex items-center justify-center overflow-hidden">
             {/* SVG Arc Gauge */}
             <svg className="absolute bottom-0 w-36 h-18">
@@ -161,29 +196,77 @@ export default function DashboardView() {
               <path 
                 d="M 10,70 A 60,60 0 0,1 134,70" 
                 fill="none" 
-                stroke="url(#gaugeGradient)" 
+                stroke={gaugeColor} 
                 strokeWidth="10" 
                 strokeLinecap="round"
                 strokeDasharray="200"
-                strokeDashoffset={200 - (200 * (user?.eco_score || 748)) / 1000}
+                strokeDashoffset={200 - (200 * budgetPercent) / 100}
               />
-              <defs>
-                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#ef4444" />
-                  <stop offset="50%" stopColor="#f59e0b" />
-                  <stop offset="100%" stopColor="#22c55e" />
-                </linearGradient>
-              </defs>
             </svg>
             <div className="absolute bottom-1 flex flex-col items-center">
-              <span className="text-2xl font-black text-slate-800">{user?.eco_score || 748}</span>
-              <span className="text-[10px] text-slate-400 font-bold uppercase">/ 1000</span>
+              <span className="text-xl font-black text-slate-800">{total_footprint}</span>
+              <span className="text-[9px] text-slate-400 font-bold uppercase">/ {monthlyBudget} kg</span>
             </div>
           </div>
-          <div className="mt-2 text-xs font-bold text-emerald-600">Great Going! 🎉</div>
-          <div className="text-[10px] text-slate-400 mt-0.5">↑ 24% this week</div>
+          
+          {/* Slider input */}
+          <div className="w-full mt-2 px-2">
+            <input 
+              type="range" 
+              min="100" 
+              max="2000" 
+              step="50" 
+              value={monthlyBudget} 
+              onChange={handleBudgetChange}
+              className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+            />
+            <div className="flex justify-between text-[9px] text-slate-400 font-semibold mt-1">
+              <span>Min: 100kg</span>
+              <span>Max: 2000kg</span>
+            </div>
+          </div>
+
+          <div className={`mt-2 text-xs font-bold ${gaugeTextColor}`}>{gaugeText}</div>
         </div>
       </div>
+
+      {/* Carbon Budget Alerts / Tip Banner */}
+      {(isOverBudget || isNearBudget) && (
+        <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in ${
+          isOverBudget ? "bg-red-50 border-red-100 text-red-800" : "bg-amber-50 border-amber-100 text-amber-800"
+        }`}>
+          <div className="flex items-start gap-3">
+            <span className="text-2xl shrink-0">{isOverBudget ? "🚨" : "⚠️"}</span>
+            <div>
+              <h4 className="font-bold text-sm">
+                {isOverBudget ? "Carbon Budget Exceeded!" : "Approaching Carbon Budget Limit"}
+              </h4>
+              <p className="text-xs opacity-90 mt-0.5">
+                {isOverBudget 
+                  ? `Your carbon footprint is ${total_footprint} kg CO₂, exceeding your set limit of ${monthlyBudget} kg by ${Math.round(total_footprint - monthlyBudget)} kg.` 
+                  : `You have consumed ${budgetPercent}% of your monthly limit (${total_footprint} kg used out of ${monthlyBudget} kg).`
+                }
+              </p>
+              <p className="text-xs font-bold mt-2 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
+                <span>Tip: {
+                  isOverBudget 
+                    ? "Consider choosing public transit, consuming plant-based meals, or skipping non-essential purchases today to offset this."
+                    : "Try unplugging idle household appliances and reducing warm water usage to keep within your budget."
+                }</span>
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setActiveTab("recommendations")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all whitespace-nowrap self-start sm:self-center ${
+              isOverBudget ? "bg-red-600 hover:bg-red-700 text-white" : "bg-amber-600 hover:bg-amber-700 text-white"
+            }`}
+          >
+            Get Reduction Tips
+          </button>
+        </div>
+      )}
 
       {/* Main Grid: Telemetry + Categories */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

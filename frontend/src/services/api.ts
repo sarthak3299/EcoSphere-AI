@@ -159,6 +159,23 @@ export const api = {
         headers: getHeaders()
       });
       return handleResponse(res);
+    },
+    
+    async verify(id: number) {
+      const res = await fetch(`${API_BASE_URL}/incident/${id}/verify`, {
+        method: "POST",
+        headers: getHeaders()
+      });
+      return handleResponse(res);
+    },
+    
+    async resolve(id: number, imageBase64?: string) {
+      const res = await fetch(`${API_BASE_URL}/incident/${id}/resolve`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ image_data: imageBase64 || null })
+      });
+      return handleResponse(res);
     }
   },
   

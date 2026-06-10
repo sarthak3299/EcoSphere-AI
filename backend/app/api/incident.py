@@ -102,3 +102,66 @@ def get_incident_details(
             detail="Incident report not found."
         )
     return report
+
+@router.post("/{report_id}/verify")
+def verify_incident(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user)
+):
+    report = db.query(models.IncidentReport).filter(models.IncidentReport.id == report_id).first()
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_444_NOT_FOUND if hasattr(status, 'HTTP_444_NOT_FOUND') else 404,
+            detail="Incident report not found."
+        )
+    
+    # Transition status
+    if report.status == "Submitted":
+        report.status = "Under Review"
+    elif report.status == "Under Review":
+        report.status = "Assigned"
+    elif report.status == "Assigned":
+        report.status = "Action Initiated"
+        
+    # Award small verification points (+15 XP, +5 Eco Score)
+    current_user.xp += 15
+    if current_user.xp >= current_user.level * 100:
+        current_user.xp -= current_user.level * 100
+        current_user.level += 1
+    current_user.eco_score = min(1000, current_user.eco_score + 5)
+    
+    db.commit()
+    db.refresh(report)
+    return {"message": f"Report verified successfully. Status is now '{report.status}'.", "status": report.status}
+
+@router.post("/{report_id}/resolve")
+def resolve_incident(
+    report_id: int,
+    resolve_in: schemas.IncidentResolve,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user)
+):
+    report = db.query(models.IncidentReport).filter(models.IncidentReport.id == report_id).first()
+    if not report:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident report not found."
+        )
+        
+    report.status = "Resolved"
+    if resolve_in.image_data:
+        # Save proof image_url if provided
+        report.image_url = resolve_in.image_data
+        
+    # Award resolved points (+100 XP, +40 Eco Score)
+    current_user.xp += 100
+    if current_user.xp >= current_user.level * 100:
+        current_user.xp -= current_user.level * 100
+        current_user.level += 1
+    current_user.eco_score = min(1000, current_user.eco_score + 40)
+    
+    db.commit()
+    db.refresh(report)
+    return {"message": "Incident report successfully resolved! Rewarded +100 XP and +40 Eco Points.", "status": report.status}
+

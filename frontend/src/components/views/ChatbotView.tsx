@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useRef, useEffect } from "react";
 import { api } from "@/services/api";
 import { 
@@ -9,7 +8,11 @@ import {
   Bot,
   User,
   ArrowRight,
-  MessageSquare
+  MessageSquare,
+  Volume2,
+  VolumeX,
+  Mic,
+  MicOff
 } from "lucide-react";
 
 interface Message {
@@ -30,6 +33,9 @@ export default function ChatbotView() {
   ]);
   const [inputVal, setInputVal] = useState("");
   const [loading, setLoading] = useState(false);
+  const [ttsEnabled, setTtsEnabled] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -39,17 +45,69 @@ export default function ChatbotView() {
     }
   }, [messages, loading]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const rec = new SpeechRecognition();
+        rec.continuous = false;
+        rec.interimResults = false;
+        rec.lang = "en-US";
+        
+        rec.onstart = () => {
+          setIsListening(true);
+        };
+        
+        rec.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          setInputVal(transcript);
+        };
+        
+        rec.onerror = (event: any) => {
+          console.error("Speech recognition error:", event.error);
+          setIsListening(false);
+        };
+        
+        rec.onend = () => {
+          setIsListening(false);
+        };
+        
+        recognitionRef.current = rec;
+      }
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      alert("Speech recognition is not supported in your browser. Try Google Chrome.");
+      return;
+    }
+    
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
+  };
+
+  const speakText = (text: string) => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const cleanText = text.replace(/[*#`_\-]/g, ""); // strip markdown
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
 
-    // Add user message
     const userMsg: Message = { sender: "user", text };
     setMessages((prev) => [...prev, userMsg]);
     setInputVal("");
     setLoading(true);
 
     try {
-      // API payload requires history formatted as schemas.ChatMessage
       const historyPayload = messages.map((m) => ({
         sender: m.sender,
         text: m.text
@@ -58,6 +116,9 @@ export default function ChatbotView() {
       const res = await api.ai.sendMessage(historyPayload, text);
       
       setMessages((prev) => [...prev, { sender: "bot", text: res.response }]);
+      if (ttsEnabled) {
+        speakText(res.response);
+      }
     } catch (err) {
       setMessages((prev) => [
         ...prev, 
@@ -98,16 +159,42 @@ export default function ChatbotView() {
           </div>
         </div>
         
-        <button 
-          onClick={() => {
-            if (confirm("Are you sure you want to reset your conversation?")) {
-              setMessages([messages[0]]);
-            }
-          }}
-          className="text-emerald-300 hover:text-white text-[11px] font-black bg-emerald-800/30 hover:bg-emerald-800/50 px-3 py-1.5 rounded-xl border border-emerald-700/20 transition-all active:scale-95"
-        >
-          Reset Chat
-        </button>
+        <div className="flex items-center gap-2">
+          {/* TTS Toggle Button */}
+          <button
+            onClick={() => {
+              const nextVal = !ttsEnabled;
+              setTtsEnabled(nextVal);
+              if (nextVal) {
+                speakText("Voice response enabled.");
+              } else {
+                if (typeof window !== "undefined" && window.speechSynthesis) {
+                  window.speechSynthesis.cancel();
+                }
+              }
+            }}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl border text-[11px] font-black transition-all active:scale-95 ${
+              ttsEnabled 
+                ? "bg-emerald-600 border-emerald-500 text-white shadow-md shadow-emerald-600/10" 
+                : "bg-emerald-800/30 border-emerald-700/20 text-emerald-300 hover:text-white hover:bg-emerald-800/50"
+            }`}
+            title={ttsEnabled ? "Disable Text-To-Speech" : "Enable Text-To-Speech"}
+          >
+            {ttsEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            <span>Voice Response</span>
+          </button>
+
+          <button 
+            onClick={() => {
+              if (confirm("Are you sure you want to reset your conversation?")) {
+                setMessages([messages[0]]);
+              }
+            }}
+            className="text-emerald-300 hover:text-white text-[11px] font-black bg-emerald-800/30 hover:bg-emerald-800/50 px-3 py-1.5 rounded-xl border border-emerald-700/20 transition-all active:scale-95"
+          >
+            Reset Chat
+          </button>
+        </div>
       </div>
 
       {/* Messages Feed panel */}
@@ -129,12 +216,21 @@ export default function ChatbotView() {
               </div>
 
               {/* Message bubble */}
-              <div className={`p-4 rounded-2xl text-[12px] leading-relaxed shadow-sm transition-all duration-200 hover:shadow-md ${
+              <div className={`relative p-4 rounded-2xl text-[12px] leading-relaxed shadow-sm transition-all duration-200 hover:shadow-md group ${
                 isBot 
                   ? "bg-white border border-emerald-100 text-slate-800 rounded-bl-xs" 
                   : "bg-gradient-to-r from-emerald-600 to-teal-500 text-white rounded-br-xs border border-emerald-500/25"
               }`}>
-                <p className="whitespace-pre-line font-medium leading-relaxed">{msg.text}</p>
+                <p className="whitespace-pre-line font-medium leading-relaxed pr-6">{msg.text}</p>
+                {isBot && (
+                  <button 
+                    onClick={() => speakText(msg.text)}
+                    className="absolute right-2 bottom-2 p-1 bg-slate-50 hover:bg-emerald-50 rounded-lg text-slate-400 hover:text-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Read aloud"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           );
@@ -175,17 +271,41 @@ export default function ChatbotView() {
         </div>
       )}
 
-      {/* Input controls footer */}
-      <div className="p-4 border-t border-slate-100 shrink-0 bg-white z-10">
+      {/* Wave animation and input controls footer */}
+      <div className="p-4 border-t border-slate-100 shrink-0 bg-white z-10 space-y-3">
+        {isListening && (
+          <div className="flex items-center gap-1 justify-center py-1 bg-emerald-50/50 border border-emerald-100 rounded-xl max-w-xs mx-auto animate-pulse">
+            <span className="w-1 h-3 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+            <span className="w-1 h-5 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '100ms' }}></span>
+            <span className="w-1.5 h-7 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '200ms' }}></span>
+            <span className="w-1 h-5 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+            <span className="w-1 h-3 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '400ms' }}></span>
+            <span className="text-[10px] text-emerald-800 font-bold ml-2">Listening to speech...</span>
+          </div>
+        )}
+
         <form 
           onSubmit={(e) => { e.preventDefault(); handleSendMessage(inputVal); }}
           className="flex gap-2.5 max-w-4xl mx-auto"
         >
+          <button
+            type="button"
+            onClick={toggleListening}
+            className={`p-3.5 border rounded-2xl transition-all duration-200 active:scale-95 shrink-0 flex items-center justify-center cursor-pointer ${
+              isListening 
+                ? "bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20" 
+                : "bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-500"
+            }`}
+            title={isListening ? "Stop voice input" : "Start voice input"}
+          >
+            {isListening ? <MicOff className="w-4.5 h-4.5" /> : <Mic className="w-4.5 h-4.5" />}
+          </button>
+
           <input
             type="text"
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
-            placeholder="Ask EcoBot anything about environmental impact, goals, calculations..."
+            placeholder={isListening ? "Say something..." : "Ask EcoBot anything about environmental impact, goals, calculations..."}
             className="flex-1 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-2xl px-5 py-3.5 outline-none text-xs font-semibold text-slate-700 placeholder-slate-400 shadow-inner transition-all focus:ring-2 focus:ring-emerald-500/10"
             required
             disabled={loading}
