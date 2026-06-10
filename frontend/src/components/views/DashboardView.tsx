@@ -29,6 +29,19 @@ export default function DashboardView() {
 
   const { total_footprint, daily_average, category_breakdowns, category_percentages, monthly_trend, recent_activity } = dashboardData;
 
+  // Dynamic calculations to make the dashboard alive and reactive
+  const treesOffset = Math.max(1, Math.round(total_footprint / 30));
+  const energySaved = Math.round((user?.eco_score || 748) * 0.2);
+  const waterSaved = Math.round((user?.eco_score || 748) * 1.6);
+  const userLevel = user?.level || 2;
+  const userScore = user?.eco_score || 748;
+
+  const sortedCategories = Object.entries(category_breakdowns as Record<string, number> || {})
+    .sort((a, b) => b[1] - a[1]);
+  const topCategoryName = sortedCategories[0]?.[0] || "None";
+  const topCategoryVal = sortedCategories[0]?.[1] || 0;
+  const topCategoryPercent = total_footprint > 0 ? Math.round((topCategoryVal / total_footprint) * 100) : 0;
+
   // Pie chart data for Top Contributing Sources
   const pieData = Object.entries(category_breakdowns)
     .filter(([_, val]) => (val as number) > 0)
@@ -81,18 +94,18 @@ export default function DashboardView() {
         {/* Trees Equivalent */}
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-slate-500">Trees Equivalent</span>
+            <span className="text-sm font-semibold text-slate-500">Trees Offset</span>
             <div className="p-2 bg-emerald-100 text-emerald-800 rounded-lg">
               <Leaf className="w-5 h-5" fill="currentColor" />
             </div>
           </div>
           <div className="mt-4">
-            <h3 className="text-2xl font-black text-slate-800">12 <span className="text-sm font-normal text-slate-500">Trees</span></h3>
-            <p className="text-xs text-slate-400 mt-0.5">This Month</p>
+            <h3 className="text-2xl font-black text-slate-800">{treesOffset} <span className="text-sm font-normal text-slate-500">Trees</span></h3>
+            <p className="text-xs text-slate-400 mt-0.5">To offset emissions</p>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 mt-3">
             <TrendingUp className="w-4 h-4" />
-            <span>+3 vs last month</span>
+            <span>Calculated from active logs</span>
           </div>
         </div>
 
@@ -105,12 +118,12 @@ export default function DashboardView() {
             </div>
           </div>
           <div className="mt-4">
-            <h3 className="text-2xl font-black text-slate-800">156 <span className="text-sm font-normal text-slate-500">kWh</span></h3>
+            <h3 className="text-2xl font-black text-slate-800">{energySaved} <span className="text-sm font-normal text-slate-500">kWh</span></h3>
             <p className="text-xs text-slate-400 mt-0.5">This Month</p>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 mt-3">
             <TrendingUp className="w-4 h-4" />
-            <span>6% vs last month</span>
+            <span>Based on Eco Score rank</span>
           </div>
         </div>
 
@@ -123,12 +136,12 @@ export default function DashboardView() {
             </div>
           </div>
           <div className="mt-4">
-            <h3 className="text-2xl font-black text-slate-800">1,240 <span className="text-sm font-normal text-slate-500">L</span></h3>
+            <h3 className="text-2xl font-black text-slate-800">{waterSaved.toLocaleString()} <span className="text-sm font-normal text-slate-500">L</span></h3>
             <p className="text-xs text-slate-400 mt-0.5">This Month</p>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 mt-3">
             <TrendingDown className="w-4 h-4" />
-            <span>5% vs last month</span>
+            <span>Scale with Eco Score achievements</span>
           </div>
         </div>
 
@@ -228,9 +241,9 @@ export default function DashboardView() {
             ) : (
               <div className="text-xs text-slate-400">No data available</div>
             )}
-            <div className="absolute flex flex-col items-center">
-              <span className="text-xs text-slate-400 font-bold uppercase">Transport</span>
-              <span className="text-lg font-black text-slate-800">42%</span>
+            <div className="absolute flex flex-col items-center px-2 text-center">
+              <span className="text-[10px] text-slate-400 font-bold uppercase truncate max-w-[90px]">{topCategoryName}</span>
+              <span className="text-lg font-black text-slate-800">{topCategoryPercent}%</span>
             </div>
           </div>
 
@@ -368,7 +381,7 @@ export default function DashboardView() {
                 <Award className="w-6 h-6" />
               </div>
               <h4 className="text-xs font-bold text-slate-800">Green Habit</h4>
-              <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">Level 2</p>
+              <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">Level {userLevel}</p>
             </div>
 
             {/* Badge 3: Carbon Saver */}
@@ -377,7 +390,7 @@ export default function DashboardView() {
                 <Award className="w-6 h-6" fill="currentColor" />
               </div>
               <h4 className="text-xs font-bold text-slate-800">Carbon Saver</h4>
-              <p className="text-[9px] text-purple-600 font-semibold mt-0.5">Top 10%</p>
+              <p className="text-[9px] text-purple-600 font-semibold mt-0.5">{userScore > 800 ? "Top 5%" : userScore > 600 ? "Top 15%" : "Top 30%"}</p>
             </div>
 
             {/* Badge 4: Community Hero */}
@@ -386,7 +399,7 @@ export default function DashboardView() {
                 <Award className="w-6 h-6" />
               </div>
               <h4 className="text-xs font-bold text-slate-800">Community Hero</h4>
-              <p className="text-[9px] text-orange-600 font-semibold mt-0.5">Level 1</p>
+              <p className="text-[9px] text-orange-600 font-semibold mt-0.5">Level {Math.max(1, userLevel - 1)}</p>
             </div>
           </div>
 
