@@ -3,14 +3,10 @@
 import React, { useState } from "react";
 import { useApp } from "@/store/AppContext";
 import { 
-  Users, 
   MessageCircle, 
   Heart, 
   Share2, 
-  Send,
-  Sparkles,
-  Award,
-  Leaf
+  Send
 } from "lucide-react";
 
 interface Post {

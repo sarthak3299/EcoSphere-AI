@@ -19,6 +19,7 @@ const HeatmapMap = dynamic(() => import("@/components/HeatmapMap"), {
 });
 
 export default function HeatmapView() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [incidents, setIncidents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -36,10 +37,21 @@ export default function HeatmapView() {
   };
 
   useEffect(() => {
-    fetchIncidents();
+    let ignore = false;
+    const load = async () => {
+      await Promise.resolve();
+      if (!ignore) {
+        fetchIncidents();
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  const filteredIncidents = incidents.filter((inc) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const filteredIncidents = incidents.filter((inc: any) => {
     if (categoryFilter === "All") return true;
     return inc.category.toLowerCase() === categoryFilter.toLowerCase();
   });

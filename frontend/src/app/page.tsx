@@ -32,8 +32,7 @@ import {
   MessageSquare,
   Check,
   Trash2,
-  Inbox,
-  X
+  Inbox
 } from "lucide-react";
 
 export default function Home() {
@@ -159,6 +158,7 @@ export default function Home() {
               <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400" />
               <input 
                 type="text" 
+                aria-label="Search metrics, reports, campaigns"
                 placeholder="Search metrics, reports, campaigns..."
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 pl-10 pr-4 outline-none text-xs font-semibold text-slate-700 placeholder-slate-400 focus:border-emerald-500 transition-all"
               />
@@ -383,7 +383,7 @@ export default function Home() {
         {/* Testimonial Quote */}
         <div className="p-4 rounded-2xl bg-white/5 border border-white/5 max-w-sm backdrop-blur-md">
           <p className="text-[11px] text-slate-300 leading-relaxed italic">
-            "EcoSphere AI helped me understand my impact and take meaningful actions every day."
+            &quot;EcoSphere AI helped me understand my impact and take meaningful actions every day.&quot;
           </p>
           <div className="flex items-center gap-2 mt-3 text-[10px] font-bold text-slate-400">
             <div className="w-5 h-5 rounded-full bg-emerald-700" />
@@ -419,10 +419,11 @@ export default function Home() {
 
             {isSignup && (
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
+                <label htmlFor="auth-name" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
                 <div className="relative">
                   <User className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
                   <input
+                    id="auth-name"
                     type="text"
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
@@ -435,10 +436,11 @@ export default function Home() {
             )}
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
+              <label htmlFor="auth-email" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
                 <input
+                  id="auth-email"
                   type="email"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
@@ -450,10 +452,11 @@ export default function Home() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Password</label>
+              <label htmlFor="auth-password" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
                 <input
+                  id="auth-password"
                   type="password"
                   value={authPassword}
                   onChange={(e) => setAuthPassword(e.target.value)}

@@ -40,8 +40,9 @@ async function handleProxy(req: NextRequest) {
       statusText: response.statusText,
       headers: responseHeaders,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Proxy error:", error);
-    return NextResponse.json({ error: "Failed to proxy request", detail: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: "Failed to proxy request", detail: errorMessage }, { status: 500 });
   }
 }

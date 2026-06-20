@@ -1,6 +1,6 @@
 import datetime
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 # Token Schemas
 class Token(BaseModel):
@@ -39,8 +39,7 @@ class UserResponse(UserBase):
     profile_image: Optional[str] = None
     created_at: datetime.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Carbon Record Schemas
 class CarbonRecordBase(BaseModel):
@@ -57,8 +56,7 @@ class CarbonRecordResponse(CarbonRecordBase):
     user_id: int
     date: datetime.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CarbonDashboardResponse(BaseModel):
     total_footprint: float
@@ -78,7 +76,7 @@ class IncidentReportBase(BaseModel):
     severity: str = "Medium"
 
 class IncidentReportCreate(IncidentReportBase):
-    image_data: Optional[str] = None # Base64 string from camera/upload
+    image_data: Optional[str] = Field(None, max_length=10485760) # 10MB max length
 
 class IncidentReportResponse(IncidentReportBase):
     id: int
@@ -88,8 +86,7 @@ class IncidentReportResponse(IncidentReportBase):
     authority: str
     created_at: datetime.datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Challenge Schemas
 class ChallengeResponse(BaseModel):
@@ -101,8 +98,7 @@ class ChallengeResponse(BaseModel):
     duration_days: int
     difficulty: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserChallengeResponse(BaseModel):
     id: int
@@ -112,8 +108,7 @@ class UserChallengeResponse(BaseModel):
     joined_at: datetime.datetime
     completed_at: Optional[datetime.datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Event Schemas
 class EventBase(BaseModel):
@@ -132,8 +127,7 @@ class EventResponse(EventBase):
     joined: Optional[bool] = False
     participant_count: int = 0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Chatbot & Recommendation Schemas
 class ChatMessage(BaseModel):
@@ -157,5 +151,5 @@ class RecommendationResponse(BaseModel):
 
 # Incident Verification & Resolution Schemas
 class IncidentResolve(BaseModel):
-    image_data: Optional[str] = None
+    image_data: Optional[str] = Field(None, max_length=10485760) # 10MB max length
 

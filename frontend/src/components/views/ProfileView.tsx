@@ -4,17 +4,12 @@ import React from "react";
 import { useApp } from "@/store/AppContext";
 import { 
   Award, 
-  Leaf, 
-  Calendar, 
-  FileText, 
-  Activity, 
-  MapPin, 
   Mail, 
   CalendarRange 
 } from "lucide-react";
 
 export default function ProfileView() {
-  const { user, dashboardData } = useApp();
+  const { user } = useApp();
 
   return (
     <div className="space-y-6 animate-fade-in">

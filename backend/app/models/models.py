@@ -14,7 +14,7 @@ class User(Base):
     level = Column(Integer, default=1)
     xp = Column(Integer, default=150)
     profile_image = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
 
     # Relationships
     carbon_records = relationship("CarbonRecord", back_populates="user", cascade="all, delete-orphan")
@@ -31,7 +31,7 @@ class CarbonRecord(Base):
     category = Column(String(50), nullable=False)  # Transport, Electricity, Food, Shopping, Waste, Water
     details = Column(JSON, nullable=True)  # Details like distance, fuel type, kwh, etc.
     footprint = Column(Float, nullable=False)  # CO2e in kg
-    date = Column(DateTime, default=datetime.datetime.utcnow)
+    date = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
 
     user = relationship("User", back_populates="carbon_records")
 
@@ -50,7 +50,7 @@ class IncidentReport(Base):
     severity = Column(String(20), default="Medium")  # Low, Medium, High
     status = Column(String(50), default="Submitted")  # Submitted, Under Review, Assigned, Action Initiated, Resolved
     authority = Column(String(100), default="Municipal Corporation")
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
 
     user = relationship("User", back_populates="incidents")
 
@@ -77,7 +77,7 @@ class UserChallenge(Base):
     challenge_id = Column(Integer, ForeignKey("challenges.id", ondelete="CASCADE"), nullable=False)
     progress = Column(Integer, default=0)  # 0 to 100 %
     status = Column(String(50), default="Active")  # Active, Completed
-    joined_at = Column(DateTime, default=datetime.datetime.utcnow)
+    joined_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
     completed_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="challenges")
@@ -96,7 +96,7 @@ class Event(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     image_url = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
 
     users = relationship("UserEvent", back_populates="event", cascade="all, delete-orphan")
 
@@ -107,7 +107,7 @@ class UserEvent(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
-    joined_at = Column(DateTime, default=datetime.datetime.utcnow)
+    joined_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
 
     user = relationship("User", back_populates="events")
     event = relationship("Event", back_populates="users")

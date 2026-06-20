@@ -4,7 +4,6 @@ import { api } from "@/services/api";
 import { 
   Sparkles, 
   Send, 
-  Loader2, 
   Bot,
   User,
   ArrowRight,
@@ -35,6 +34,7 @@ export default function ChatbotView() {
   const [loading, setLoading] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -47,6 +47,7 @@ export default function ChatbotView() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         const rec = new SpeechRecognition();
@@ -58,11 +59,13 @@ export default function ChatbotView() {
           setIsListening(true);
         };
         
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         rec.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript;
           setInputVal(transcript);
         };
         
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         rec.onerror = (event: any) => {
           console.error("Speech recognition error:", event.error);
           setIsListening(false);
@@ -119,7 +122,7 @@ export default function ChatbotView() {
       if (ttsEnabled) {
         speakText(res.response);
       }
-    } catch (err) {
+    } catch {
       setMessages((prev) => [
         ...prev, 
         { sender: "bot", text: "Sorry, I ran into a network issue trying to connect to my brain. Please try again in a second!" }
@@ -309,6 +312,7 @@ export default function ChatbotView() {
             className="flex-1 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white rounded-2xl px-5 py-3.5 outline-none text-xs font-semibold text-slate-700 placeholder-slate-400 shadow-inner transition-all focus:ring-2 focus:ring-emerald-500/10"
             required
             disabled={loading}
+            aria-label="Ask EcoBot environmental questions"
           />
           <button
             type="submit"

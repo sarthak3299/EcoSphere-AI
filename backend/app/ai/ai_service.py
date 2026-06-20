@@ -1,20 +1,22 @@
 import json
 import logging
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from app.config.config import settings
 
 logger = logging.getLogger("ai_service")
 
-# Try to initialize Gemini SDK
+# Try to initialize Gemini client
 gemini_available = False
+client = None
 api_key = settings.GEMINI_API_KEY or settings.GOOGLE_API_KEY
 if api_key:
     try:
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
         gemini_available = True
-        logger.info("Gemini API successfully configured using Google Services.")
+        logger.info("Gemini Client successfully configured using Google Services.")
     except Exception as e:
-        logger.error(f"Failed to configure Gemini SDK: {e}")
+        logger.error(f"Failed to configure Gemini SDK/Client: {e}")
 else:
     logger.warning("Neither GEMINI_API_KEY nor GOOGLE_API_KEY found in environment. Running with intelligent local fallback system.")
 
@@ -22,18 +24,29 @@ class AIService:
     @staticmethod
     def _call_gemini_json(prompt: str, image_data: bytes = None, mime_type: str = "image/jpeg") -> dict:
         """Helper to invoke Gemini 1.5 Flash and expect a JSON response."""
-        if not gemini_available:
+        if not gemini_available or not client:
             raise ConnectionError("Gemini client is not configured")
             
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "application/json"})
+            config = types.GenerateContentConfig(response_mime_type="application/json")
             if image_data:
-                response = model.generate_content([
-                    prompt,
-                    {"mime_type": mime_type, "data": image_data}
-                ])
+                response = client.models.generate_content(
+                    model='gemini-1.5-flash',
+                    contents=[
+                        types.Part.from_bytes(
+                            data=image_data,
+                            mime_type=mime_type
+                        ),
+                        prompt
+                    ],
+                    config=config
+                )
             else:
-                response = model.generate_content(prompt)
+                response = client.models.generate_content(
+                    model='gemini-1.5-flash',
+                    contents=prompt,
+                    config=config
+                )
             return json.loads(response.text)
         except Exception as e:
             logger.error(f"Gemini API call failed: {e}")
@@ -149,8 +162,11 @@ class AIService:
             - "category": string, one of "Transport", "Electricity", "Food", "Shopping", "Waste", "Water"
             """
             try:
-                model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "application/json"})
-                res = model.generate_content(prompt)
+                res = client.models.generate_content(
+                    model='gemini-1.5-flash',
+                    contents=prompt,
+                    config=types.GenerateContentConfig(response_mime_type="application/json")
+                )
                 return json.loads(res.text)
             except Exception as e:
                 logger.error(f"Gemini recommendations failed: {e}")
@@ -186,10 +202,9 @@ class AIService:
     @classmethod
     def chatbot_response(cls, history: list, new_message: str) -> str:
         """Interactive chatbot response using Gemini."""
-        if gemini_available:
+        if gemini_available and client:
             try:
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                chat = model.start_chat(history=[])
+                chat = client.chats.create(model='gemini-1.5-flash')
                 # Convert input history format to Gemini format
                 # (For simplicity we feed standard text summary as system context)
                 system_context = (

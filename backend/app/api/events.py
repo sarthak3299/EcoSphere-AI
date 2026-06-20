@@ -61,7 +61,7 @@ def create_event(
         latitude=event_in.latitude,
         longitude=event_in.longitude,
         image_url=event_in.image_url,
-        created_at=datetime.datetime.utcnow()
+        created_at=datetime.datetime.now(datetime.timezone.utc)
     )
     db.add(new_event)
     db.commit()
@@ -108,7 +108,7 @@ def join_event(
     new_registration = models.UserEvent(
         user_id=current_user.id,
         event_id=event_id,
-        joined_at=datetime.datetime.utcnow()
+        joined_at=datetime.datetime.now(datetime.timezone.utc)
     )
     db.add(new_registration)
     

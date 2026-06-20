@@ -12,8 +12,7 @@ import {
   ArrowRightLeft,
   CheckCircle2,
   TreePine,
-  Lightbulb,
-  Compass
+  Lightbulb
 } from "lucide-react";
 
 interface Option {
@@ -79,7 +78,8 @@ const SIMULATOR_DATA: Record<string, { current: Option; alternatives: Option[] }
 
 export default function SimulatorView() {
   const [activeCategory, setActiveCategory] = useState("Transport");
-  const [selectedAlternativeId, setSelectedAlternativeId] = useState<string | null>(null);
+  const [selectedAlternativeIdState, setSelectedAlternativeIdState] = useState<string | null>(null);
+  const [prevCategory, setPrevCategory] = useState(activeCategory);
 
   const simulationData = useMemo(() => {
     return SIMULATOR_DATA[activeCategory] || SIMULATOR_DATA.Transport;
@@ -88,12 +88,12 @@ export default function SimulatorView() {
   const currentOption = simulationData.current;
   const alternatives = simulationData.alternatives;
 
-  // Auto select first alternative when switching categories
-  React.useEffect(() => {
-    if (alternatives.length > 0) {
-      setSelectedAlternativeId(alternatives[0].id);
-    }
-  }, [activeCategory, alternatives]);
+  if (activeCategory !== prevCategory) {
+    setPrevCategory(activeCategory);
+    setSelectedAlternativeIdState(null);
+  }
+
+  const selectedAlternativeId = selectedAlternativeIdState || (alternatives.length > 0 ? alternatives[0].id : null);
 
   const selectedAlternative = useMemo(() => {
     return alternatives.find((alt) => alt.id === selectedAlternativeId) || alternatives[0];
@@ -191,7 +191,7 @@ export default function SimulatorView() {
                 return (
                   <div
                     key={alt.id}
-                    onClick={() => setSelectedAlternativeId(alt.id)}
+                    onClick={() => setSelectedAlternativeIdState(alt.id)}
                     className={`p-4 rounded-2xl border cursor-pointer flex items-center justify-between transition ${
                       isSelected
                         ? "bg-emerald-50/20 border-emerald-500 shadow-xs"

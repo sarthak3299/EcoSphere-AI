@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { useApp } from "@/store/AppContext";
 import { 
-  Gamepad2, 
   Trash2, 
   HelpCircle, 
   CheckCircle, 
@@ -89,8 +88,11 @@ export default function GamesView() {
         setSorterFinished(true);
         // Credit XP / Points on complete
         if (user) {
-          user.xp += 40;
-          user.eco_score = Math.min(1000, user.eco_score + 10);
+          setUser({
+            ...user,
+            xp: user.xp + 40,
+            eco_score: Math.min(1000, user.eco_score + 10)
+          });
         }
       }
     }, 1200);
@@ -127,8 +129,11 @@ export default function GamesView() {
     } else {
       setQuizFinished(true);
       if (user) {
-        user.xp += quizScore * 20;
-        user.eco_score = Math.min(1000, user.eco_score + quizScore * 5);
+        setUser({
+          ...user,
+          xp: user.xp + quizScore * 20,
+          eco_score: Math.min(1000, user.eco_score + quizScore * 5)
+        });
       }
     }
   };

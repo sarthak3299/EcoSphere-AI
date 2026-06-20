@@ -60,7 +60,7 @@ def join_challenge(
         challenge_id=challenge_id,
         progress=0,
         status="Active",
-        joined_at=datetime.datetime.utcnow()
+        joined_at=datetime.datetime.now(datetime.timezone.utc)
     )
     db.add(new_user_challenge)
     db.commit()
@@ -93,7 +93,7 @@ def update_challenge_progress(
 
     if new_progress >= 100:
         user_challenge.status = "Completed"
-        user_challenge.completed_at = datetime.datetime.utcnow()
+        user_challenge.completed_at = datetime.datetime.now(datetime.timezone.utc)
         # Reward user with Eco points and XP
         challenge_points = user_challenge.challenge.points
         current_user.eco_score = min(1000, current_user.eco_score + challenge_points)

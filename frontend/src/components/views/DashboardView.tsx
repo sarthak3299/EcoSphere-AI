@@ -18,16 +18,13 @@ import {
 
 export default function DashboardView() {
   const { user, dashboardData, recommendations, events, setActiveTab } = useApp();
-  const [monthlyBudget, setMonthlyBudget] = React.useState<number>(500);
-
-  React.useEffect(() => {
+  const [monthlyBudget, setMonthlyBudget] = React.useState<number>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("monthly_carbon_budget");
-      if (saved) {
-        setMonthlyBudget(parseInt(saved, 10));
-      }
+      return saved ? parseInt(saved, 10) : 500;
     }
-  }, []);
+    return 500;
+  });
 
   const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
@@ -45,7 +42,7 @@ export default function DashboardView() {
     );
   }
 
-  const { total_footprint, daily_average, category_breakdowns, category_percentages, monthly_trend, recent_activity } = dashboardData;
+  const { total_footprint, category_breakdowns, category_percentages, monthly_trend, recent_activity } = dashboardData;
 
   // Dynamic calculations to make the dashboard alive and reactive
   const treesOffset = Math.max(1, Math.round(total_footprint / 30));
@@ -79,7 +76,7 @@ export default function DashboardView() {
 
   // Pie chart data for Top Contributing Sources
   const pieData = Object.entries(category_breakdowns)
-    .filter(([_, val]) => (val as number) > 0)
+    .filter(([, val]) => (val as number) > 0)
     .map(([key, val]) => ({
       name: key,
       value: val as number
@@ -95,7 +92,7 @@ export default function DashboardView() {
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
             Welcome back, {user?.name || "Ananya"}! 🌿
           </h1>
-          <p className="text-slate-500 mt-1">Here's your environmental impact overview.</p>
+          <p className="text-slate-500 mt-1">Here&apos;s your environmental impact overview.</p>
         </div>
         <button 
           onClick={() => alert("Sharing impact to social feed!")}
@@ -219,6 +216,7 @@ export default function DashboardView() {
               value={monthlyBudget} 
               onChange={handleBudgetChange}
               className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+              aria-label="Monthly carbon budget"
             />
             <div className="flex justify-between text-[9px] text-slate-400 font-semibold mt-1">
               <span>Min: 100kg</span>
@@ -274,7 +272,10 @@ export default function DashboardView() {
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800">Your Carbon Footprint Trend</h3>
-            <select className="text-xs bg-slate-50 border border-slate-200 rounded-lg p-1.5 font-semibold text-slate-600 outline-none">
+            <select 
+              aria-label="Filter carbon trend period"
+              className="text-xs bg-slate-50 border border-slate-200 rounded-lg p-1.5 font-semibold text-slate-600 outline-none"
+            >
               <option>This Year</option>
               <option>Last 6 Months</option>
             </select>
@@ -332,7 +333,7 @@ export default function DashboardView() {
 
           <div className="space-y-2 mt-4">
             {Object.entries(category_percentages)
-              .filter(([_, val]) => (val as number) > 0)
+              .filter(([, val]) => (val as number) > 0)
               .map(([key, val], idx) => (
                 <div key={key} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
@@ -397,7 +398,7 @@ export default function DashboardView() {
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
           <h3 className="font-bold text-slate-800">Recent Activity</h3>
           <div className="space-y-3">
-            {recent_activity.slice(0, 3).map((act: any, index: number) => (
+            {recent_activity.slice(0, 3).map((act: { type: string; message: string; time: string }, index: number) => (
               <div key={index} className="flex items-center gap-3 text-xs">
                 <div className={`p-2 rounded-lg shrink-0 ${
                   act.type === "challenge" ? "bg-amber-50 text-amber-600" :
@@ -425,7 +426,7 @@ export default function DashboardView() {
             <button onClick={() => setActiveTab("events")} className="text-xs font-bold text-emerald-700 hover:underline">View All</button>
           </div>
           <div className="space-y-2">
-            {events.slice(0, 1).map((ev: any) => (
+            {events.slice(0, 1).map((ev: { id: number; title: string; location_text: string }) => (
               <div key={ev.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-3">
                 <div>
                   <h5 className="text-xs font-bold text-slate-800">{ev.title}</h5>

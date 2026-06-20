@@ -13,6 +13,15 @@ const getHeaders = (isMultipart = false) => {
   return headers;
 };
 
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+    this.name = "ApiError";
+  }
+}
+
 // Generic response handler
 async function handleResponse(response: Response) {
   if (!response.ok) {
@@ -23,7 +32,7 @@ async function handleResponse(response: Response) {
     } catch {
       // ignore JSON parse error
     }
-    throw new Error(errMsg);
+    throw new ApiError(errMsg, response.status);
   }
   return response.json();
 }
@@ -102,7 +111,7 @@ export const api = {
       return handleResponse(res);
     },
     
-    async addEntry(category: string, details: Record<string, any>) {
+    async addEntry(category: string, details: Record<string, unknown>) {
       const res = await fetch(`${API_BASE_URL}/carbon/calculate`, {
         method: "POST",
         headers: getHeaders(),
@@ -174,6 +183,14 @@ export const api = {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify({ image_data: imageBase64 || null })
+      });
+      return handleResponse(res);
+    },
+    
+    async escalate(id: number) {
+      const res = await fetch(`${API_BASE_URL}/incident/${id}/escalate`, {
+        method: "POST",
+        headers: getHeaders()
       });
       return handleResponse(res);
     }

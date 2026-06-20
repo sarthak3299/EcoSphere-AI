@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import { useApp } from "@/store/AppContext";
 import { api } from "@/services/api";
 import { 
   Camera, 
   MapPin, 
-  AlertTriangle, 
   Building2, 
   PhoneCall, 
   Loader2, 
@@ -25,8 +25,10 @@ const AUTHORITIES = [
 ];
 
 export default function ReportsView() {
-  const { refreshData } = useApp();
+  const { refreshData, showToast } = useApp();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [reports, setReports] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
   
   // Form input state
@@ -35,8 +37,6 @@ export default function ReportsView() {
   const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState("Medium");
   
-  // Image state
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   
   // UI Loading States
@@ -50,7 +50,7 @@ export default function ReportsView() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const proofInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     setLoadingList(true);
     try {
       const data = await api.incident.getAll();
@@ -63,16 +63,25 @@ export default function ReportsView() {
     } finally {
       setLoadingList(false);
     }
-  };
+  }, [selectedReport]);
 
   useEffect(() => {
-    fetchReports();
-  }, []);
+    let ignore = false;
+    const load = async () => {
+      await Promise.resolve();
+      if (!ignore) {
+        fetchReports();
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, [fetchReports]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -110,14 +119,12 @@ export default function ReportsView() {
       setLocationText("");
       setDescription("");
       setSeverity("Medium");
-      setImageFile(null);
       setImagePreview(null);
       
       // Refresh
-      await refreshData();
-      await fetchReports();
+      showToast("Incident report filed successfully!", "success");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to file incident report");
+      showToast(err instanceof Error ? err.message : "Failed to file incident report", "error");
     } finally {
       setSubmitting(false);
     }
@@ -128,12 +135,30 @@ export default function ReportsView() {
     setActionLoading(true);
     try {
       const result = await api.incident.verify(selectedReport.id);
-      alert(result.message);
+      showToast(result.message, "success");
       await refreshData();
       await fetchReports();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setSelectedReport((prev: any) => prev ? { ...prev, status: result.status } : null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to verify report");
+      showToast(err instanceof Error ? err.message : "Failed to verify report", "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleEscalateReport = async () => {
+    if (!selectedReport) return;
+    setActionLoading(true);
+    try {
+      const result = await api.incident.escalate(selectedReport.id);
+      showToast(result.message, "success");
+      await refreshData();
+      await fetchReports();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setSelectedReport((prev: any) => prev ? { ...prev, status: result.status } : null);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to escalate report", "error");
     } finally {
       setActionLoading(false);
     }
@@ -167,10 +192,10 @@ export default function ReportsView() {
         imageUrl
       );
 
-      alert(`Cleanup event "${title}" organized successfully! You can find it listed under the Events tab. Let's make our neighborhood cleaner!`);
+      showToast(`Cleanup event "${title}" organized successfully!`, "success");
       await refreshData();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to create cleanup event");
+      showToast(err instanceof Error ? err.message : "Failed to create cleanup event", "error");
     } finally {
       setActionLoading(false);
     }
@@ -192,14 +217,15 @@ export default function ReportsView() {
     setResolvingReport(true);
     try {
       const result = await api.incident.resolve(selectedReport.id, proofImage || undefined);
-      alert(result.message);
+      showToast(result.message, "success");
       setShowResolveModal(false);
       setProofImage(null);
       await refreshData();
       await fetchReports();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setSelectedReport((prev: any) => prev ? { ...prev, status: "Resolved", image_url: proofImage || prev.image_url } : null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to resolve report");
+      showToast(err instanceof Error ? err.message : "Failed to resolve report", "error");
     } finally {
       setResolvingReport(false);
     }
@@ -270,12 +296,22 @@ export default function ReportsView() {
           
           {/* Photo upload container */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-600 block">Upload Photos</label>
+            <label htmlFor="fileUploadInput" className="text-xs font-bold text-slate-600 block">Upload Photos</label>
             <div 
+              role="button"
+              tabIndex={0}
               onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              aria-label="Upload environmental incident photo"
               className="border-2 border-dashed border-slate-200 hover:border-emerald-400 bg-slate-50 hover:bg-emerald-50/10 rounded-2xl p-5 text-center cursor-pointer transition relative"
             >
               <input 
+                id="fileUploadInput"
                 type="file" 
                 ref={fileInputRef}
                 accept="image/*"
@@ -285,7 +321,7 @@ export default function ReportsView() {
               
               {imagePreview ? (
                 <div className="flex items-center justify-center gap-3">
-                  <img src={imagePreview} alt="Preview" className="w-16 h-16 object-cover rounded-xl border border-slate-200" />
+                  <Image src={imagePreview} alt="Preview" width={64} height={64} className="w-16 h-16 object-cover rounded-xl border border-slate-200" />
                   <div className="text-left">
                     <span className="text-xs font-bold text-slate-700 block">Photo Attached</span>
                     <span className="text-[10px] text-slate-400 mt-0.5">Click to replace image file</span>
@@ -303,7 +339,7 @@ export default function ReportsView() {
 
           {/* Location field */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-600 flex justify-between">
+            <label htmlFor="locationText" className="text-xs font-bold text-slate-600 flex justify-between">
               <span>Location Coordinates</span>
               <button 
                 type="button" 
@@ -315,6 +351,7 @@ export default function ReportsView() {
               </button>
             </label>
             <input 
+              id="locationText"
               type="text"
               value={locationText}
               onChange={(e) => setLocationText(e.target.value)}
@@ -326,8 +363,9 @@ export default function ReportsView() {
 
           {/* Category selection */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-600 block">Hazard Category</label>
+            <label htmlFor="hazardCategory" className="text-xs font-bold text-slate-600 block">Hazard Category</label>
             <select
+              id="hazardCategory"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none text-sm font-semibold text-slate-700"
@@ -342,8 +380,9 @@ export default function ReportsView() {
 
           {/* Description */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-600 block">Description Details</label>
+            <label htmlFor="descriptionDetails" className="text-xs font-bold text-slate-600 block">Description Details</label>
             <textarea
+              id="descriptionDetails"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Provide context (e.g. garbage accumulating next to residential area, foul smell)..."
@@ -455,9 +494,11 @@ export default function ReportsView() {
                   
                   <div className="flex gap-4">
                     {selectedReport.image_url ? (
-                      <img 
+                      <Image 
                         src={selectedReport.image_url} 
                         alt="Report attachment" 
+                        width={64}
+                        height={64}
                         className="w-16 h-16 object-cover rounded-xl border border-slate-200 shrink-0" 
                       />
                     ) : (
@@ -491,6 +532,17 @@ export default function ReportsView() {
                       >
                         {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "👍 Verify Hazard (+5)"}
                       </button>
+
+                      {selectedReport.status === "Submitted" && (
+                        <button
+                          type="button"
+                          onClick={handleEscalateReport}
+                          disabled={actionLoading}
+                          className="flex-1 min-w-[100px] py-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-[11px] rounded-xl flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                        >
+                          {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "📢 Escalate to Authority (+5)"}
+                        </button>
+                      )}
                       
                       <button
                         type="button"
@@ -538,10 +590,20 @@ export default function ReportsView() {
             </div>
 
             <div 
+              role="button"
+              tabIndex={0}
               onClick={() => proofInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  proofInputRef.current?.click();
+                }
+              }}
+              aria-label="Upload cleanup completion proof photo"
               className="border-2 border-dashed border-slate-200 hover:border-emerald-400 bg-slate-50 hover:bg-emerald-50/10 rounded-2xl p-5 text-center cursor-pointer transition relative"
             >
               <input 
+                id="proofImageUploadInput"
                 type="file" 
                 ref={proofInputRef}
                 accept="image/*"
@@ -551,7 +613,7 @@ export default function ReportsView() {
               
               {proofImage ? (
                 <div className="flex items-center justify-center gap-3">
-                  <img src={proofImage} alt="Proof Preview" className="w-16 h-16 object-cover rounded-xl border border-slate-200" />
+                  <Image src={proofImage} alt="Proof Preview" width={64} height={64} className="w-16 h-16 object-cover rounded-xl border border-slate-200" />
                   <div className="text-left">
                     <span className="text-xs font-bold text-slate-700 block">Before & After Photo</span>
                     <span className="text-[10px] text-slate-400 mt-0.5">Click to replace photo</span>

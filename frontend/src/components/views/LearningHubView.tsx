@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useApp } from "@/store/AppContext";
-import { BookOpen, Search, ArrowRight, Sparkles, MessageSquare } from "lucide-react";
+import { Search, ArrowRight, Sparkles, MessageSquare } from "lucide-react";
 
 const FAQ_ITEMS = [
   {
@@ -58,6 +58,7 @@ export default function LearningHubView() {
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search sustainability topics, FAQs, and definitions..."
           className="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-12 pr-4 outline-none text-xs font-semibold text-slate-700 shadow-sm focus:border-emerald-500"
+          aria-label="Search sustainability topics, FAQs, and definitions"
         />
       </div>
 

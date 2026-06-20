@@ -9,7 +9,6 @@ import {
   Users, 
   Building2, 
   CheckCircle,
-  Plus,
   Loader2
 } from "lucide-react";
 
@@ -24,7 +23,7 @@ export default function EventsView() {
       const res = await api.events.join(id);
       await refreshData();
       alert(res.message);
-    } catch (err) {
+    } catch {
       alert("Failed to join event.");
     } finally {
       setJoiningId(null);

@@ -153,7 +153,7 @@ export default function SettingsView() {
               <button
                 key={tab.id}
                 onClick={() => {
-                  setActiveSection(tab.id as any);
+                  setActiveSection(tab.id as "profile" | "notifications" | "security" | "preferences" | "accounts");
                   // Clear alerts on switch
                   setProfileSuccess(""); setProfileError("");
                   setSecuritySuccess(""); setSecurityError("");
@@ -197,8 +197,9 @@ export default function SettingsView() {
 
               <form onSubmit={handleProfileSave} className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Full Name</label>
+                  <label htmlFor="settingsNameInput" className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Full Name</label>
                   <input 
+                    id="settingsNameInput"
                     type="text" 
                     value={name} 
                     onChange={(e) => setName(e.target.value)}
@@ -209,8 +210,9 @@ export default function SettingsView() {
                 </div>
                 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Email Address</label>
+                  <label htmlFor="settingsEmailInput" className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Email Address</label>
                   <input 
+                    id="settingsEmailInput"
                     type="email" 
                     value={email} 
                     onChange={(e) => setEmail(e.target.value)}
@@ -342,8 +344,9 @@ export default function SettingsView() {
 
               <form onSubmit={handleSecuritySave} className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Current Password</label>
+                  <label htmlFor="settingsCurrentPassword" className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Current Password</label>
                   <input 
+                    id="settingsCurrentPassword"
                     type="password" 
                     value={currentPassword} 
                     onChange={(e) => setCurrentPassword(e.target.value)}
@@ -355,8 +358,9 @@ export default function SettingsView() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">New Password</label>
+                  <label htmlFor="settingsNewPassword" className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">New Password</label>
                   <input 
+                    id="settingsNewPassword"
                     type="password" 
                     value={newPassword} 
                     onChange={(e) => setNewPassword(e.target.value)}
@@ -368,8 +372,9 @@ export default function SettingsView() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Confirm New Password</label>
+                  <label htmlFor="settingsConfirmNewPassword" className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Confirm New Password</label>
                   <input 
+                    id="settingsConfirmNewPassword"
                     type="password" 
                     value={confirmPassword} 
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -412,10 +417,10 @@ export default function SettingsView() {
                 
                 {/* Metric Unit Selector */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
                     <Gauge className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Measurement System</span>
-                  </label>
+                  </span>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
@@ -444,11 +449,12 @@ export default function SettingsView() {
 
                 {/* Display Language */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <label htmlFor="settingsLanguageSelect" className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Display Language</span>
                   </label>
                   <select
+                    id="settingsLanguageSelect"
                     value={language}
                     onChange={(e) => setLanguage(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none text-xs font-semibold text-slate-700 focus:border-emerald-500 focus:bg-white transition"
@@ -462,16 +468,16 @@ export default function SettingsView() {
 
                 {/* Theme Mode Selector */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Application Theme</span>
-                  </label>
+                  </span>
                   <div className="grid grid-cols-3 gap-2">
                     {["light", "dark", "system"].map((mode) => (
                       <button
                         key={mode}
                         type="button"
-                        onClick={() => setThemeMode(mode as any)}
+                        onClick={() => setThemeMode(mode as "light" | "dark" | "system")}
                         className={`py-2 px-3 border rounded-xl text-[10px] font-black capitalize transition cursor-pointer ${
                           themeMode === mode 
                             ? "border-emerald-600 bg-emerald-50/20 text-emerald-800" 
@@ -517,7 +523,7 @@ export default function SettingsView() {
                   { id: "github", name: "GitHub Repository Auth", logo: "🐈" },
                   { id: "microsoft", name: "Microsoft Live Connect", logo: "🟦" }
                 ].map((service) => {
-                  const isConnected = (connectedServices as any)[service.id];
+                  const isConnected = (connectedServices as Record<string, boolean>)[service.id];
                   return (
                     <div 
                       key={service.id} 
@@ -535,7 +541,7 @@ export default function SettingsView() {
 
                       <button
                         type="button"
-                        onClick={() => toggleConnection(service.id as any)}
+                        onClick={() => toggleConnection(service.id as "google" | "github" | "microsoft")}
                         className={`py-1.5 px-3.5 rounded-lg text-[10px] font-black tracking-wider uppercase transition cursor-pointer ${
                           isConnected 
                             ? "bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-600 hover:text-rose-600" 

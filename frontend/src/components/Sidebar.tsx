@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useApp } from "@/store/AppContext";
+import { useApp, UserType } from "@/store/AppContext";
 import {
   LayoutDashboard,
   Footprints,
@@ -40,7 +40,7 @@ const sidebarItems = [
 
 interface SidebarContentProps {
   activeTab: string;
-  user: any;
+  user: UserType | null;
   handleNav: (tabId: string) => void;
   logout: () => void;
 }

@@ -94,7 +94,7 @@ def calculate_and_log(
         category=record_in.category,
         details=record_in.details,
         footprint=footprint,
-        date=datetime.datetime.utcnow()
+        date=datetime.datetime.now(datetime.timezone.utc)
     )
     
     # Reward user with XP and modify Eco Score (lower footprint -> better score)
@@ -146,7 +146,7 @@ def get_dashboard(
     }
     
     # Calculate totals
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc)
     current_month_records = [r for r in records if r.date.year == now.year and r.date.month == now.month]
     
     for r in current_month_records:
@@ -257,7 +257,7 @@ async def upload_bill(
         category=category,
         details=details,
         footprint=footprint,
-        date=datetime.datetime.utcnow()
+        date=datetime.datetime.now(datetime.timezone.utc)
     )
 
     current_user.xp += 25  # OCR rewards extra XP!

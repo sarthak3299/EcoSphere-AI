@@ -2,10 +2,8 @@
 
 import React, { useState } from "react";
 import { useApp } from "@/store/AppContext";
-import { api } from "@/services/api";
 import { 
   Sparkles, 
-  Leaf, 
   ArrowRight,
   TrendingDown,
   Loader2,
@@ -27,7 +25,7 @@ export default function RecommendationsView() {
     setGenerating(true);
     try {
       await refreshData();
-    } catch (err) {
+    } catch {
       alert("Failed to sync new recommendations.");
     } finally {
       setGenerating(false);
@@ -144,7 +142,7 @@ export default function RecommendationsView() {
 
         {filteredRecs.length === 0 && (
           <div className="col-span-full bg-slate-50 rounded-2xl border border-slate-100 p-8 text-center text-slate-400 text-xs font-medium">
-            No recommendations generated for this category yet. Click 'Generate Fresh Recommendations' to update.
+            No recommendations generated for this category yet. Click &apos;Generate Fresh Recommendations&apos; to update.
           </div>
         )}
       </div>

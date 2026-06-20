@@ -25,6 +25,17 @@ def report_incident(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_service.get_current_user)
 ):
+    if report_in.category not in AUTHORITY_MAP:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid category. Must be one of: {', '.join(AUTHORITY_MAP.keys())}"
+        )
+    if report_in.severity not in ["Low", "Medium", "High"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid severity. Must be one of: Low, Medium, High"
+        )
+
     image_url = None
     severity = report_in.severity
     category = report_in.category
@@ -66,7 +77,7 @@ def report_incident(
         severity=severity,
         status="Submitted",
         authority=authority,
-        created_at=datetime.datetime.utcnow()
+        created_at=datetime.datetime.now(datetime.timezone.utc)
     )
 
     # Award points for reporting environmental hazards (+20 XP, +5 Eco Score)
@@ -164,4 +175,43 @@ def resolve_incident(
     db.commit()
     db.refresh(report)
     return {"message": "Incident report successfully resolved! Rewarded +100 XP and +40 Eco Points.", "status": report.status}
+
+@router.post("/{report_id}/escalate")
+def escalate_incident(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_service.get_current_user)
+):
+    report = db.query(models.IncidentReport).filter(models.IncidentReport.id == report_id).first()
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Incident report not found."
+        )
+        
+    if report.status == "Resolved":
+        return {"message": "Incident already resolved.", "status": report.status}
+        
+    if report.status == "Submitted":
+        report.status = "Assigned"
+        
+    authority_email = next((auth["contact"] for auth in [
+        {"name": "Pollution Control Board", "contact": "info@pcb.gov.in"},
+        {"name": "Municipal Corporation", "contact": "complaints@municipal.org"},
+        {"name": "Water Supply & Sewerage Board", "contact": "helpdesk@forest.gov.in"},
+        {"name": "Environmental Emergency Helpline", "contact": "1800-456-9000"}
+    ] if auth["name"] == report.authority), "complaints@municipal.org")
+    
+    current_user.xp += 10
+    if current_user.xp >= current_user.level * 100:
+        current_user.xp -= current_user.level * 100
+        current_user.level += 1
+    current_user.eco_score = min(1000, current_user.eco_score + 5)
+    
+    db.commit()
+    db.refresh(report)
+    return {
+        "message": f"Report officially escalated to {report.authority} ({authority_email}). Rewarded +10 XP and +5 Eco Points.",
+        "status": report.status
+    }
 

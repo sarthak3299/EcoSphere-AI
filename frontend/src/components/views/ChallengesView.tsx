@@ -10,13 +10,11 @@ import {
   Plus, 
   Loader2, 
   Percent, 
-  Award,
-  Zap,
-  Leaf
+  Zap
 } from "lucide-react";
 
 export default function ChallengesView() {
-  const { challenges, activeChallenges, refreshData } = useApp();
+  const { challenges, activeChallenges, refreshData, showToast } = useApp();
   const [activeSubTab, setActiveSubTab] = useState("Active");
   const [loadingChallengeId, setLoadingChallengeId] = useState<number | null>(null);
 
@@ -25,9 +23,9 @@ export default function ChallengesView() {
     try {
       await api.gamification.joinChallenge(id);
       await refreshData();
-      alert("Joined challenge successfully! Work towards completion to earn Eco Points.");
-    } catch (err) {
-      alert("Failed to join challenge.");
+      showToast("Joined challenge successfully! Work towards completion to earn Eco Points.", "success");
+    } catch {
+      showToast("Failed to join challenge.", "error");
     } finally {
       setLoadingChallengeId(null);
     }
@@ -38,9 +36,9 @@ export default function ChallengesView() {
     try {
       const res = await api.gamification.updateProgress(challengeId, 25); // increment by 25%
       await refreshData();
-      alert(res.message);
-    } catch (err) {
-      alert("Failed to update progress.");
+      showToast(res.message, "success");
+    } catch {
+      showToast("Failed to update progress.", "error");
     } finally {
       setLoadingChallengeId(null);
     }
@@ -199,7 +197,7 @@ export default function ChallengesView() {
 
         {currentList.length === 0 && (
           <div className="col-span-full bg-slate-50 rounded-2xl border border-slate-100 p-8 text-center text-slate-400 text-xs font-medium">
-            No challenges in this tab. Explore 'Upcoming' to discover and join new challenges!
+            No challenges in this tab. Explore &apos;Upcoming&apos; to discover and join new challenges!
           </div>
         )}
       </div>

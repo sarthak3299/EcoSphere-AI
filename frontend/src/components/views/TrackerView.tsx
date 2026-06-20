@@ -11,17 +11,25 @@ import {
   ShoppingBag,
   Trash2,
   Droplet,
-  Plus,
   Sparkles,
-  Calendar,
-  Award,
   Upload,
   Loader2,
-  CheckCircle,
-  FileText
+  CheckCircle
 } from "lucide-react";
 
-const CATEGORY_ICONS: Record<string, any> = {
+interface OCRResult {
+  analysis: {
+    confidence_score: number;
+    utility_type: string;
+    consumption_value: number;
+    units: string;
+    cost: number;
+    estimated_carbon_footprint: number;
+    insights: string;
+  };
+}
+
+const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "Transport": Car,
   "Electricity": Zap,
   "Food": UtensilsCrossed,
@@ -40,7 +48,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function TrackerView() {
-  const { dashboardData, refreshData } = useApp();
+  const { dashboardData, refreshData, showToast } = useApp();
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [isOCRModalOpen, setIsOCRModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("Transport");
@@ -48,7 +56,7 @@ export default function TrackerView() {
   // OCR upload state
   const [billFile, setBillFile] = useState<File | null>(null);
   const [ocrLoading, setOcrLoading] = useState(false);
-  const [ocrResult, setOcrResult] = useState<any | null>(null);
+  const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   
   // Form logging state
   const [distance, setDistance] = useState("10");
@@ -76,7 +84,7 @@ export default function TrackerView() {
   const handleManualLog = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormLoading(true);
-    let details: Record<string, any> = {};
+    let details: Record<string, string | number> = {};
 
     if (activeCategory === "Transport") {
       details = { mode: transportMode, distance: parseFloat(distance) };
@@ -96,8 +104,9 @@ export default function TrackerView() {
       await api.carbon.addEntry(activeCategory, details);
       await refreshData();
       setIsLogModalOpen(false);
+      showToast("Carbon footprint entry logged successfully!", "success");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to log footprint");
+      showToast(err instanceof Error ? err.message : "Failed to log footprint", "error");
     } finally {
       setFormLoading(false);
     }
@@ -114,8 +123,9 @@ export default function TrackerView() {
       const res = await api.carbon.uploadBill(billFile);
       setOcrResult(res);
       await refreshData();
+      showToast("Receipt uploaded and parsed successfully!", "success");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to parse receipt");
+      showToast(err instanceof Error ? err.message : "Failed to parse receipt", "error");
     } finally {
       setOcrLoading(false);
     }
@@ -132,11 +142,11 @@ export default function TrackerView() {
       <div className="lg:col-span-2 space-y-6">
         
         {/* Footprint Header Info */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover-premium flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full uppercase">Carbon Footprint</span>
             <h2 className="text-3xl font-extrabold text-slate-800 mt-2">{total_footprint} kg CO₂e</h2>
-            <p className="text-xs text-slate-400 mt-1">This month's total aggregated footprint</p>
+            <p className="text-xs text-slate-400 mt-1">This month&apos;s total aggregated footprint</p>
           </div>
           
           <div className="flex items-center gap-6">
@@ -152,7 +162,7 @@ export default function TrackerView() {
         </div>
 
         {/* Category Breakdown Progress Bars */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover-premium space-y-4">
           <h3 className="font-bold text-slate-800">Breakdown by Category</h3>
           <div className="space-y-4">
             {Object.entries(category_breakdowns).map(([cat, val]) => {
@@ -180,7 +190,7 @@ export default function TrackerView() {
         </div>
 
         {/* Chart View */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover-premium">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-slate-800">Emissions Trend</h3>
             <div className="flex bg-slate-50 border border-slate-100 rounded-lg p-0.5 text-xs font-bold text-slate-500">
@@ -307,8 +317,9 @@ export default function TrackerView() {
               {activeCategory === "Transport" && (
                 <>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600">Mode of Transport</label>
+                    <label htmlFor="transportModeSelect" className="text-xs font-bold text-slate-600">Mode of Transport</label>
                     <select 
+                      id="transportModeSelect"
                       value={transportMode} 
                       onChange={(e) => setTransportMode(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none text-sm font-semibold text-slate-700"
@@ -323,8 +334,9 @@ export default function TrackerView() {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600">Distance Traveled (km)</label>
+                    <label htmlFor="distanceInput" className="text-xs font-bold text-slate-600">Distance Traveled (km)</label>
                     <input 
+                      id="distanceInput"
                       type="number" 
                       value={distance} 
                       onChange={(e) => setDistance(e.target.value)}
@@ -337,8 +349,9 @@ export default function TrackerView() {
 
               {activeCategory === "Electricity" && (
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Electricity Consumed (kWh)</label>
+                  <label htmlFor="kwhInput" className="text-xs font-bold text-slate-600">Electricity Consumed (kWh)</label>
                   <input 
+                    id="kwhInput"
                     type="number" 
                     value={kwh} 
                     onChange={(e) => setKwh(e.target.value)}
@@ -350,8 +363,9 @@ export default function TrackerView() {
 
               {activeCategory === "Food" && (
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Diet Habit Today</label>
+                  <label htmlFor="dietSelect" className="text-xs font-bold text-slate-600">Diet Habit Today</label>
                   <select 
+                    id="dietSelect"
                     value={diet} 
                     onChange={(e) => setDiet(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none text-sm font-semibold text-slate-700"
@@ -367,8 +381,9 @@ export default function TrackerView() {
               {activeCategory === "Shopping" && (
                 <>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600">Purchase Category</label>
+                    <label htmlFor="shopTypeSelect" className="text-xs font-bold text-slate-600">Purchase Category</label>
                     <select 
+                      id="shopTypeSelect"
                       value={shopType} 
                       onChange={(e) => setShopType(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none text-sm font-semibold text-slate-700"
@@ -379,8 +394,9 @@ export default function TrackerView() {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600">Number of Items</label>
+                    <label htmlFor="shopItemsInput" className="text-xs font-bold text-slate-600">Number of Items</label>
                     <input 
+                      id="shopItemsInput"
                       type="number" 
                       value={shopItems} 
                       onChange={(e) => setShopItems(e.target.value)}
@@ -394,8 +410,9 @@ export default function TrackerView() {
               {activeCategory === "Waste" && (
                 <>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600">Type of Waste</label>
+                    <label htmlFor="wasteTypeSelect" className="text-xs font-bold text-slate-600">Type of Waste</label>
                     <select 
+                      id="wasteTypeSelect"
                       value={wasteType} 
                       onChange={(e) => setWasteType(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none text-sm font-semibold text-slate-700"
@@ -406,8 +423,9 @@ export default function TrackerView() {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600">Weight of Waste (kg)</label>
+                    <label htmlFor="wasteWeightInput" className="text-xs font-bold text-slate-600">Weight of Waste (kg)</label>
                     <input 
+                      id="wasteWeightInput"
                       type="number" 
                       value={wasteWeight} 
                       onChange={(e) => setWasteWeight(e.target.value)}
@@ -420,8 +438,9 @@ export default function TrackerView() {
 
               {activeCategory === "Water" && (
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Water Consumption (Liters)</label>
+                  <label htmlFor="waterLitersInput" className="text-xs font-bold text-slate-600">Water Consumption (Liters)</label>
                   <input 
+                    id="waterLitersInput"
                     type="number" 
                     value={waterLiters} 
                     onChange={(e) => setWaterLiters(e.target.value)}
@@ -473,7 +492,7 @@ export default function TrackerView() {
               {!ocrResult ? (
                 <form onSubmit={handleOCRUpload} className="space-y-4">
                   <p className="text-xs text-slate-400">
-                    Upload an electricity bill, fuel slip, or water receipt. The system's multimodal Gemini OCR will extract raw values, compute carbon metrics, and log the carbon footprints.
+                    Upload an electricity bill, fuel slip, or water receipt. The system&apos;s multimodal Gemini OCR will extract raw values, compute carbon metrics, and log the carbon footprints.
                   </p>
                   
                   <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-emerald-400 cursor-pointer relative bg-slate-50">

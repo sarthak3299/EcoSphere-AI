@@ -11,6 +11,17 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/signup", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
 def signup(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
+    if len(user_in.name.strip()) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Name must be at least 2 characters long."
+        )
+    if len(user_in.password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long for safety."
+        )
+        
     db_user = db.query(models.User).filter(models.User.email == user_in.email).first()
     if db_user:
         raise HTTPException(
@@ -37,8 +48,9 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
     if not user or not auth_service.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect email or password"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
     access_token_expires = timedelta(minutes=auth_service.settings.ACCESS_TOKEN_EXPIRE_MINUTES)
